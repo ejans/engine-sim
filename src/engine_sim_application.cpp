@@ -16,14 +16,17 @@
 
 #include "../scripting/include/compiler.h"
 
-#include <chrono>
-#include <stdlib.h>
-#include <sstream>
-
-
 #if ATG_ENGINE_DISCORD_ENABLED
 #include "../discord/Discord.h"
 #endif
+
+#if __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
+#include <chrono>
+#include <cstdlib>
+#include <sstream>
 
 std::string EngineSimApplication::s_buildVersion = "0.1.7a";
 
@@ -89,8 +92,14 @@ void EngineSimApplication::initialize(void *instance, ysContextObject::DeviceAPI
     dbasic::Path modulePath = dbasic::GetModulePath();
     dbasic::Path confPath = modulePath.Append("delta.conf");
 
-    std::string enginePath = "../dependencies/submodules/delta-studio/engines/basic";
-    m_assetPath = "../assets";
+#if __EMSCRIPTEN
+#define ES_PATH "data/"
+#else
+#define ES_PATH "../"
+#endif
+
+    std::string enginePath = ES_PATH "dependencies/submodules/delta-studio/engines/basic";
+    m_assetPath = ES_PATH "assets";
     if (confPath.Exists()) {
         std::fstream confFile(confPath.ToString(), std::ios::in);
 
@@ -166,7 +175,7 @@ void EngineSimApplication::initialize() {
 
     es_script::Compiler compiler;
     compiler.initialize();
-    const bool compiled = compiler.compile("../assets/main.mr");
+    const bool compiled = compiler.compile(ES_PATH "assets/main.mr");
     if (compiled) {
         const es_script::Compiler::Output output = compiler.execute();
         m_iceEngine = output.engine;
@@ -402,7 +411,8 @@ void EngineSimApplication::run() {
     double clutchPressure = 1.0;
     int lastMouseWheel = 0;
 
-    while (true) {
+    // TODO: move out to a separate function?
+    auto mainLoop = [&]() {
         const float dt = m_engine.GetFrameLength();
         const bool fineControlMode = m_engine.IsKeyDown(ysKey::Code::Space);
 
@@ -415,11 +425,11 @@ void EngineSimApplication::run() {
         m_screenWidth = m_engine.GetGameWindow()->GetScreenWidth();
 
         if (m_engine.ProcessKeyDown(ysKey::Code::Escape)) {
-            break;
+            return false;
         }
 
         m_engine.StartFrame();
-        if (!m_engine.IsOpen()) break;
+        if (!m_engine.IsOpen()) return false;
 
         updateScreenSizeStability();
 
@@ -702,7 +712,22 @@ void EngineSimApplication::run() {
         if (isRecording()) {
             recordFrame();
         }
+
+        return true;
+    };
+
+#if __EMSCRIPTEN__
+    auto run = [](void * loop)
+    {
+        (*static_cast<decltype(mainLoop)*>(loop))();
+    };
+    emscripten_set_main_loop_arg(run, &mainLoop, 0, true);
+#else
+    while (true) {
+        const bool contin = mainLoop();
+        if (!contin) break;
     }
+#endif
 
     if (isRecording()) {
         stopRecording();
