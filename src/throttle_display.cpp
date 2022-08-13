@@ -87,8 +87,8 @@ void ThrottleDisplay::renderThrottle(const Bounds &bounds) {
 
     // Draw throttle plate
     const float throttleAngle = (float)m_engine->getThrottlePlateAngle();
-    const float cos_theta = std::cosf(throttleAngle);
-    const float sin_theta = std::sinf(throttleAngle);
+    const float cos_theta = std::cos(throttleAngle);
+    const float sin_theta = std::sin(throttleAngle);
 
     params.y0 = origin.y - sin_theta * plateWidth / 2.0f;
     params.x0 = origin.x - cos_theta * plateWidth / 2.0f;
