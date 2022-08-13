@@ -24,10 +24,7 @@ namespace es_script {
     };
 
     template <typename Type>
-    extern inline const piranha::ChannelType *LookupChannelType() {
-        static_assert(false, "Invalid type lookup");
-        return nullptr;
-    }
+    inline const piranha::ChannelType *LookupChannelType() = delete;
 
     class EngineNode;
     class RodJournalNode;
@@ -46,7 +43,7 @@ namespace es_script {
     class ImpulseResponseNode;
 
 #define ASSIGN_CHANNEL_TYPE(type, channel) \
-    template <> extern inline const piranha::ChannelType *LookupChannelType<type>() { \
+    template <> inline const piranha::ChannelType *LookupChannelType<type>() { \
         return &ObjectChannel::channel; \
     }
 
