@@ -207,10 +207,10 @@ void EngineSimApplication::initialize() {
     transmission->initialize(tParams);
 
     Simulator::Parameters simulatorParams;
-    simulatorParams.Engine = m_iceEngine;
-    simulatorParams.SystemType = Simulator::SystemType::NsvOptimized;
-    simulatorParams.Transmission = transmission;
-    simulatorParams.Vehicle = vehicle;
+    simulatorParams.engine = m_iceEngine;
+    simulatorParams.systemType = Simulator::SystemType::NsvOptimized;
+    simulatorParams.transmission = transmission;
+    simulatorParams.vehicle = vehicle;
     simulatorParams.SimulationFrequency = 10000;
     simulatorParams.FluidSimulationSteps = 8;
     m_simulator.initialize(simulatorParams);

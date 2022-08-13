@@ -23,10 +23,10 @@ class Simulator {
         };
 
         struct Parameters {
-            SystemType SystemType = SystemType::NsvOptimized;
-            Engine *Engine = nullptr;
-            Transmission *Transmission = nullptr;
-            Vehicle *Vehicle = nullptr;
+            SystemType systemType = SystemType::NsvOptimized;
+            Engine *engine = nullptr;
+            Transmission *transmission = nullptr;
+            Vehicle *vehicle = nullptr;
 
             int SimulationFrequency = 10000;
             int FluidSimulationSteps = 8;

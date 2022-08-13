@@ -14,8 +14,8 @@ class ConnectingRod : public Part {
             double CenterOfMass = 0.0;
             double Length = 0.0;
 
-            Crankshaft *Crankshaft = nullptr;
-            Piston *Piston = nullptr;
+            Crankshaft *crankshaft = nullptr;
+            Piston *piston = nullptr;
             int Journal = 0;
         };
 

@@ -45,11 +45,11 @@ Simulator::~Simulator() {
 }
 
 void Simulator::initialize(const Parameters &params) {
-    if (params.Engine == nullptr) {
+    if (params.engine == nullptr) {
         return;
     }
 
-    if (params.SystemType == SystemType::NsvOptimized) {
+    if (params.systemType == SystemType::NsvOptimized) {
         atg_scs::OptimizedNsvRigidBodySystem *system =
             new atg_scs::OptimizedNsvRigidBodySystem;
         system->initialize(
@@ -65,9 +65,9 @@ void Simulator::initialize(const Parameters &params) {
         m_system = system;
     }
 
-    m_engine = params.Engine;
-    m_vehicle = params.Vehicle;
-    m_transmission = params.Transmission;
+    m_engine = params.engine;
+    m_vehicle = params.vehicle;
+    m_transmission = params.transmission;
     m_fluidSimulationSteps = params.FluidSimulationSteps;
     m_simulationFrequency = params.SimulationFrequency;
 
