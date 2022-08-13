@@ -92,7 +92,7 @@ void EngineSimApplication::initialize(void *instance, ysContextObject::DeviceAPI
     dbasic::Path modulePath = dbasic::GetModulePath();
     dbasic::Path confPath = modulePath.Append("delta.conf");
 
-#if __EMSCRIPTEN
+#if __EMSCRIPTEN__
 #define ES_PATH "data/"
 #else
 #define ES_PATH "../"
