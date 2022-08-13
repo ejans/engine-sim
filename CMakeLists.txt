@@ -25,15 +25,16 @@ project(engine-sim)
 set(CMAKE_CXX_STANDARD 17)
 
 if (EMSCRIPTEN)
-    set(EM_FLAGS
+    set(COMMON_FLAGS
         "SHELL:-s USE_SDL=2"
         "SHELL:-s USE_SDL_IMAGE=2"
+        # TODO: hook these up to debug flags
+        -O1
+        -g -gsource-map
     )
     add_compile_options(
         -msimd128 -msse
-        -O3
-        -g -gsource-map
-        ${EM_FLAGS}
+        ${COMMON_FLAGS}
     )
     add_link_options(
         "SHELL:-s SINGLE_FILE=1"
@@ -43,9 +44,7 @@ if (EMSCRIPTEN)
         #"SHELL:-s ALLOW_MEMORY_GROWTH"
         #"SHELL:-s USE_PTHREADS=1"
         "--embed-file=data"
-        -O3
-        -g -gsource-map
-        ${EM_FLAGS}
+        ${COMMON_FLAGS}
         "SHELL:-s MIN_WEBGL_VERSION=2"
         "SHELL:-s MAX_WEBGL_VERSION=2"
         "SHELL:-s USE_WEBGL2=1"
