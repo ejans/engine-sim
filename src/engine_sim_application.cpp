@@ -95,7 +95,7 @@ void EngineSimApplication::initialize(void *instance, ysContextObject::DeviceAPI
 #if __EMSCRIPTEN__
 #define ES_PATH "data/"
 #else
-#define ES_PATH "../"
+#define ES_PATH "../engine-sim/" // HACK: for out-of-source cmake builds
 #endif
 
     std::string enginePath = ES_PATH "dependencies/submodules/delta-studio/engines/basic";

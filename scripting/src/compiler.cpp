@@ -25,6 +25,7 @@ void es_script::Compiler::initialize() {
     m_compiler->addSearchPath("../../es/");
     m_compiler->addSearchPath("../es/");
     m_compiler->addSearchPath("es/");
+    m_compiler->addSearchPath("../engine-sim/es/"); // HACK: for out-of-source cmake builds
     m_compiler->addSearchPath("data/es/");
 
     m_rules.initialize();
