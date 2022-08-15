@@ -38,6 +38,12 @@ std::string EngineSimApplication::s_buildVersion = "0.1.7a";
 
 
 EngineSimApplication::EngineSimApplication() {
+#if 1 // HACK
+    // Don't ask...
+    {
+        ImpulseResponse ignore_fix_linker_issue;
+    }
+#endif
     m_assetPath = "";
 
     m_geometryVertexBuffer = nullptr;
