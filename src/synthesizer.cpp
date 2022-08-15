@@ -101,15 +101,19 @@ void Synthesizer::initializeImpulseResponse(
 
 void Synthesizer::startAudioRenderingThread() {
     m_run = true;
+#if 0 // TODO: emscripten crashes with this
     m_thread = new std::thread(&Synthesizer::audioRenderingThread, this);
+#endif
 }
 
 void Synthesizer::endAudioRenderingThread() {
     m_run = false;
     endInputBlock();
 
+#if 0 // HACK
     m_thread->join();
     delete m_thread;
+#endif
 
     m_thread = nullptr;
 }
@@ -133,11 +137,15 @@ void Synthesizer::destroy() {
 int Synthesizer::readAudioOutput(int samples, int16_t *buffer) {
     std::lock_guard<std::mutex> lock(m_lock0);
 
-    const int newDataLength = m_audioBuffer.size();
+    int newDataLength = m_audioBuffer.size();
     if (newDataLength >= samples) {
         m_audioBuffer.readAndRemove(samples, buffer);
     }
     else {
+#if 1 // HACK: run in sync
+        renderAudio();
+        newDataLength = std::min((int)m_audioBuffer.size(), samples);
+#endif
         m_audioBuffer.readAndRemove(newDataLength, buffer);
         memset(
             buffer + newDataLength,
@@ -213,6 +221,14 @@ void Synthesizer::audioRenderingThread() {
 
 #undef max
 void Synthesizer::renderAudio() {
+#if 1 // HACK: for emscripten
+    const bool inputAvailable =
+        m_inputChannels[0].Data.size() > 0
+        && m_audioBuffer.size() < 2000;
+    if (!inputAvailable) {
+        return;
+    }
+#else
     std::unique_lock<std::mutex> lk0(m_lock0);
 
     m_cv0.wait(lk0, [this] {
@@ -221,6 +237,7 @@ void Synthesizer::renderAudio() {
             && m_audioBuffer.size() < 2000;
         return !m_run || (inputAvailable && !m_processed);
     });
+#endif
 
     const int n = std::min(
         std::max(0, 2000 - (int)m_audioBuffer.size()),
@@ -233,7 +250,9 @@ void Synthesizer::renderAudio() {
     m_inputSamplesRead = n;
     m_processed = true;
 
+#if 0 // HACK: for emscripten
     lk0.unlock();
+#endif
 
     for (int i = 0; i < m_inputChannelCount; ++i) {
         m_filters[i].AirNoiseLowPass.setCutoffFrequency(
