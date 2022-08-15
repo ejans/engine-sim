@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 option(DTV "Enable video output" OFF)
 option(PIRANHA_ENABLED "Enable scripting input" OFF)
-option(DISCORD_ENABLED "Enable Discord Rich Presence" ON)
+option(DISCORD_ENABLED "Enable Discord Rich Presence" OFF)
 
 if (DTV)
     add_compile_definitions(ATG_ENGINE_SIM_VIDEO_CAPTURE)
@@ -198,18 +198,6 @@ if (PIRANHA_ENABLED)
         piranha)
 endif (PIRANHA_ENABLED)
 
-if (DISCORD_ENABLED)
-    add_library(discord STATIC
-        # Source files
-        dependencies/discord/Discord.cpp
-
-        # Include files
-        dependencies/discord/Discord.h
-        dependencies/discord/discord_register.h
-        dependencies/discord/discord_rpc.h
-    )
-endif (DISCORD_ENABLED)
-
 add_executable(engine-sim-app WIN32
     # Source files
     src/main.cpp
@@ -296,12 +284,10 @@ if (PIRANHA_ENABLED)
 endif (PIRANHA_ENABLED)
 
 if (DISCORD_ENABLED)
-add_library(discord-rpc STATIC IMPORTED)
-set_property(TARGET discord-rpc PROPERTY IMPORTED_LOCATION ${PROJECT_SOURCE_DIR}/dependencies/discord/lib/discord-rpc.lib)
-
     target_link_libraries(engine-sim-app
-    	discord
-	discord-rpc)
+        discord
+        discord-rpc
+    )
 endif (DISCORD_ENABLED)
 
 
