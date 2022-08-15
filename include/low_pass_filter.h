@@ -5,6 +5,8 @@
 
 #include "constants.h"
 
+#define __forceinline inline
+
 class LowPassFilter : public Filter {
     public:
         LowPassFilter();
