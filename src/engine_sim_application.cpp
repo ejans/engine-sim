@@ -23,6 +23,12 @@
 #if __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
+#if 1 // HACK
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_audio.h>
+#endif
+
+static SDL_AudioDeviceID g_adev;
 
 #include <chrono>
 #include <cstdlib>
@@ -159,6 +165,27 @@ void EngineSimApplication::initialize(void *instance, ysContextObject::DeviceAPI
     m_geometryGenerator.initialize(100000, 200000);
 
     initialize();
+
+#if 1 // HACK
+    static bool inited = false;
+    if (!inited) {
+        inited = true;
+
+        SDL_Init(SDL_INIT_AUDIO);
+
+        SDL_AudioSpec want{}, have;
+        want.freq = 44100;
+        want.format = AUDIO_S16;
+        want.channels = 1;
+        want.samples = 4096;
+        want.callback = nullptr;
+        want.userdata = nullptr;
+
+        g_adev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+        printf("g_adev=%i - %s\n", g_adev, SDL_GetError());
+    }
+    SDL_PauseAudioDevice(g_adev, 0);
+#endif
 }
 
 void EngineSimApplication::initialize() {
@@ -223,6 +250,31 @@ void EngineSimApplication::initialize() {
     for (int i = 0; i < m_iceEngine->getExhaustSystemCount(); ++i) {
         ImpulseResponse *response = m_iceEngine->getExhaustSystem(i)->getImpulseResponse();
 
+#if 1 // HACK
+        // Lazy approach to WAV loading
+        printf("opening impluse response: '%s'\n", response->getFilename().c_str());
+        FILE *file = fopen(response->getFilename().c_str(), "rb");
+        assert(file != nullptr);
+
+        // Skip header (fixed size)
+        uint32_t length = 0;
+        fseek(file, 40, SEEK_SET);
+        // Read length
+        fread(&length, 4, 1, file);
+        printf("len=%u\n", length);
+
+        // Read the rest of the owl
+        std::vector<int16_t> data(length / 2);
+        fread(data.data(), data.size(), 2, file);
+        fclose(file);
+
+        m_simulator.getSynthesizer()->initializeImpulseResponse(
+            data.data(),
+            data.size(),
+            response->getVolume(),
+            i
+        );
+#else
         ysWindowsAudioWaveFile waveFile;
         waveFile.OpenFile(response->getFilename().c_str());
         waveFile.InitializeInternalBuffer(waveFile.GetSampleCount());
@@ -237,6 +289,7 @@ void EngineSimApplication::initialize() {
         );
 
         waveFile.DestroyInternalBuffer();
+#endif
     }
 
     m_uiManager.initialize(this);
@@ -265,6 +318,7 @@ void EngineSimApplication::initialize() {
     m_audioBuffer.initialize(44100, 44100);
     m_audioBuffer.m_writePointer = (int)(44100 * 0.1);
 
+#if 0 // HACK
     ysAudioParameters params;
     params.m_bitsPerSample = 16;
     params.m_channelCount = 1;
@@ -276,6 +330,7 @@ void EngineSimApplication::initialize() {
     m_audioSource->SetMode(ysAudioSource::Mode::Loop);
     m_audioSource->SetPan(0.0f);
     m_audioSource->SetVolume(1.0f);
+#endif
 
 #ifdef ATG_ENGINE_DISCORD_ENABLED
     //Create a global instance of discord-rpc
@@ -329,6 +384,42 @@ void EngineSimApplication::process(float frame_dt) {
             (duration.count() / 1E9) / iterationCount);
     }
 
+#if 1 // HACK
+#if __EMSCRIPTEN__
+    const int shouldQueueAudio = EM_ASM_INT({ return shouldQueueAudio(); });
+#else
+    const int shouldQueueAudio = 1;
+#endif
+    if (shouldQueueAudio) {
+        //const int samplesQueued = SDL_GetQueuedAudioSize(g_adev) / sizeof(int16_t);
+        //const int minSamples = 44100 / 10; // TODO: arbitrary number
+        //if (samplesQueued < minSamples)
+        //{
+
+        const int numSamples = 44100 * frame_dt;
+        std::vector<int16_t> samples(numSamples);
+        const int readSamples = m_simulator.readAudioOutput(samples.size(), samples.data());
+        if (readSamples != 0)
+        {
+            for (int i = 0; i < readSamples; ++i) {
+                const int16_t sample = samples[i];
+                if (m_oscillatorSampleOffset % 4 == 0) {
+                    m_oscCluster->getAudioWaveformOscilloscope()->addDataPoint(
+                        m_oscillatorSampleOffset,
+                        sample / (float)(INT16_MAX));
+                }
+
+                m_oscillatorSampleOffset = (m_oscillatorSampleOffset + 1) % (44100 / 10);
+            }
+
+            SDL_QueueAudio(g_adev, samples.data(), readSamples * sizeof(int16_t));
+        }
+    } else {
+        SDL_ClearQueuedAudio(g_adev);
+    }
+#endif
+
+#if 0
     const SampleOffset currentAudioPosition = m_audioSource->GetCurrentPosition();
     const SampleOffset safeWritePosition = m_audioSource->GetCurrentWritePosition();
     const SampleOffset writePosition = m_audioBuffer.m_writePointer;
@@ -383,6 +474,7 @@ void EngineSimApplication::process(float frame_dt) {
         m_audioBuffer.offsetDelta(m_audioSource->GetCurrentPosition(), m_audioBuffer.m_writePointer) / (44100 * 0.1));
     m_performanceCluster->addInputBufferUsageSample(
         (double)m_simulator.getSynthesizerInputLatency() / m_simulator.getSynthesizerInputLatencyTarget());
+#endif
 }
 
 void EngineSimApplication::render() {
@@ -737,6 +829,13 @@ void EngineSimApplication::run() {
 }
 
 void EngineSimApplication::destroy() {
+#if 1//__EMSCRIPTEN__ // HACK
+    SDL_PauseAudioDevice(g_adev, 1);
+    SDL_ClearQueuedAudio(g_adev);
+    //SDL_CloseAudioDevice(g_adev); // keep alive so hotloading works
+    //g_adev = 0;
+#endif
+
     m_shaderSet.Destroy();
 
     m_engine.GetDevice()->DestroyGPUBuffer(m_geometryVertexBuffer);
